@@ -1,0 +1,3 @@
+2026-04-08 10:10:00 INFO Starting worker...
+Exception: Memory limit exceeded (OOM)
+2026-04-08 10:10:03 ERROR Worker killed due to OOM
