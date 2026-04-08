@@ -1,0 +1,5 @@
+2026-04-08 10:05:00 INFO Running task...
+Traceback (most recent call last):
+  File "dag.py", line 12, in <module>
+    import pandas as pd
+ImportError: No module named pandas

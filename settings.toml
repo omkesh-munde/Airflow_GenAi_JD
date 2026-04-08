@@ -1,0 +1,16 @@
+[paths]
+# You can use absolute paths, or keep these relative to this project folder.
+logs_dir = "./logs"
+sample_logs_dir = "./sample_logs"
+
+[llm]
+model = "gpt-4o-mini"
+temperature = 0
+max_retries = 3
+retry_backoff_s = 1.5
+
+[openai]
+# Optional: you can put your key here for local prototyping.
+# Environment variable OPENAI_API_KEY still takes priority if already set.
+api_key = ""
+
