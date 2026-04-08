@@ -1,5 +1,0 @@
-2026-04-08 10:00:00 INFO Starting job...
-2026-04-08 10:00:02 ERROR: psycopg2 connection failed: timeout
-2026-04-08 10:00:02 ERROR: could not connect to server: Connection refused
-	Is the server running on host "localhost" (127.0.0.1) and accepting
-	TCP/IP connections on port 5432?
