@@ -5,7 +5,7 @@ import subprocess
 from datetime import datetime
 
 from airflow import DAG
-from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.python import PythonOperator
 
 
 REPO_DIR = os.getenv("LOG_AI_REPO_DIR", "/home/ssm-user/ads/Airflow_GenAi_JD")

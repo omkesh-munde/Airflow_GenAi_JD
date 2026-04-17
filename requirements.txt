@@ -3,3 +3,4 @@ langchain-openai
 openai
 watchdog
 python-dotenv
+rich
