@@ -35,6 +35,10 @@ project/
 │   │── router.py
 │── dags/
 │   │── log_ai_pipeline_dag.py
+│── scripts/
+│   │── start_live_stack.sh
+│   │── stop_live_stack.sh
+│   │── status_live_stack.sh
 │── logs/
 │── sample_logs/
 ```
@@ -91,6 +95,16 @@ project/
 - `dags/log_ai_pipeline_dag.py`
   - Airflow DAG (`log_ai_pipeline`) that invokes this project.
   - Uses env-overridable repo/python paths.
+
+- `scripts/start_live_stack.sh`
+  - Starts realtime watcher and Airflow scheduler in parallel (background).
+  - Optionally starts Airflow API server.
+
+- `scripts/stop_live_stack.sh`
+  - Stops the background processes started by live stack script.
+
+- `scripts/status_live_stack.sh`
+  - Shows running status and recent watcher logs.
 
 - `sample_logs/`
   - Dummy test logs for prototype simulation.
@@ -169,6 +183,28 @@ export OPENAI_API_KEY="<your_key>"
 airflow dags test log_ai_pipeline 2026-04-17
 ```
 
+## Realtime live mode (Airflow + AI watcher in parallel)
+
+Use this when you want both services running continuously:
+
+```bash
+cd ~/ads/Airflow_GenAi_JD
+source adsenv/bin/activate
+pip install -r requirements.txt
+
+export OPENAI_API_KEY="<your_key>"
+export AIRFLOW_HOME=/home/ssm-user/airflow
+
+# start both in background
+bash scripts/start_live_stack.sh
+
+# check health/status
+bash scripts/status_live_stack.sh
+
+# stop when needed
+bash scripts/stop_live_stack.sh
+```
+
 ---
 
 ## 5) Configuration
@@ -195,6 +231,7 @@ Update `settings.toml`:
 - If OpenAI key is missing, app returns safe fallback responses.
 - Airflow warning for `graphviz` is non-blocking.
 - For production Airflow, consider replacing watcher-style runtime with a bounded `run_once` executor script.
+- In Airflow 3 logs, `DAG bundles loaded: dags-folder, example_dags` is normal. It means Airflow loaded its built-in bundle source. Your execution still uses your DAG id `log_ai_pipeline`.
 
 ---
 
