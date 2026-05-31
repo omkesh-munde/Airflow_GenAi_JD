@@ -1,0 +1,6 @@
+2026-05-30 19:00:00 ERROR Celery broker transport disconnected
+Traceback (most recent call last):
+  File "kombu/connection.py", line 472, in _reraise_as_library_errors
+    raise ConnectionError("broker unreachable")
+kombu.exceptions.OperationalError: amqp connection lost to redis://broker:6379/0
+ERROR: Redis connection reset - celery broker transport failure

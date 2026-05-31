@@ -1,6 +1,17 @@
 langchain
 langchain-openai
+langchain-chroma
+chromadb
+flask
 openai
 watchdog
 python-dotenv
 rich
+pydantic
+
+# Optional LLM providers — install the one(s) you configure in settings.toml
+langchain-anthropic
+langchain-google-genai
+langchain-ollama
+langchain-groq
+langchain-huggingface

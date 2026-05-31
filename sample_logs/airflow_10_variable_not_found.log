@@ -1,0 +1,6 @@
+2026-05-30 17:00:00 INFO Task config_loader starting
+2026-05-30 17:00:01 ERROR Variable does not exist: api_endpoint_url
+Traceback (most recent call last):
+  File "task.py", line 22, in execute
+    url = Variable.get("api_endpoint_url")
+KeyError: Variable 'api_endpoint_url' - airflow variable not found

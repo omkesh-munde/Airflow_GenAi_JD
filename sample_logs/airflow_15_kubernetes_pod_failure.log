@@ -1,0 +1,5 @@
+2026-05-30 22:00:00 INFO KubernetesExecutor launching pod airflow-task-x7k9m
+2026-05-30 22:05:00 ERROR Pod failed - phase=Failed
+2026-05-30 22:05:01 ERROR Pod evicted due to ephemeral storage pressure
+2026-05-30 22:05:02 ERROR Container OOMKilled - backoff limit exceeded
+Exception: KubernetesExecutor pod phase failed for task run_id=manual_2026-05-30

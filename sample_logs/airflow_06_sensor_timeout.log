@@ -1,0 +1,4 @@
+2026-05-30 13:00:00 INFO SensorOperator poking for s3://bucket/data/_SUCCESS
+2026-05-30 15:00:00 ERROR Sensor has timed out after 7200 seconds
+2026-05-30 15:00:01 ERROR S3KeySensor poke timeout in reschedule mode
+Exception: Sensor has timed out - soft fail sensor disabled

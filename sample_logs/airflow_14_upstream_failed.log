@@ -1,0 +1,4 @@
+2026-05-30 21:00:00 INFO Task aggregate_results skipped
+2026-05-30 21:00:01 ERROR Upstream failed - trigger rule one_failed not satisfied
+2026-05-30 21:00:02 ERROR Skipped because upstream task 'validate_data' failed
+Exception: Task skipped - upstream failed with trigger rule all_success

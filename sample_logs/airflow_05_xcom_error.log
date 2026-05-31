@@ -1,0 +1,6 @@
+2026-05-30 12:00:00 INFO Task downstream_task starting
+2026-05-30 12:00:01 ERROR Failed to pull XCom value for task 'upstream_task'
+Traceback (most recent call last):
+  File "xcom.py", line 120, in pull
+    raise ValueError("XCom not found")
+Exception: XCom return value not found for key 'return_value'

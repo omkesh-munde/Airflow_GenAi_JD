@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ pipeline.name }} — Audit Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --surface2: #243044;
+      --border: #2d3a4f;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent2: #06b6d4;
+      --high: #ef4444;
+      --medium: #f59e0b;
+      --low: #22c55e;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    header {
+      background: linear-gradient(135deg, #1e3a5f 0%, #0f1419 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1.25rem 2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.35rem; font-weight: 600; }
+    header p { color: var(--muted); font-size: 0.875rem; margin-top: 0.25rem; }
+    .badge {
+      display: inline-block;
+      padding: 0.2rem 0.6rem;
+      border-radius: 999px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+    }
+    .badge.live { background: #14532d; color: #86efac; border-color: #166534; }
+    main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 3rem; }
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+    }
+    .card .label { color: var(--muted); font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; }
+    .card .value { font-size: 1.75rem; font-weight: 700; margin-top: 0.25rem; }
+    .card .sub { color: var(--muted); font-size: 0.8rem; margin-top: 0.2rem; }
+    .grid-2 {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .panel {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+    .panel h2 { font-size: 1rem; margin-bottom: 1rem; color: var(--muted); }
+    .chart-wrap { position: relative; height: 260px; }
+    .audit-section { margin-top: 0.5rem; }
+    .audit-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
+      align-items: center;
+    }
+    .audit-toolbar input, .audit-toolbar select {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.5rem 0.75rem;
+      border-radius: 8px;
+      font-size: 0.875rem;
+    }
+    .audit-toolbar input { flex: 1; min-width: 200px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.875rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 0.75rem 0.6rem;
+      border-bottom: 1px solid var(--border);
+    }
+    th { color: var(--muted); font-weight: 600; font-size: 0.75rem; text-transform: uppercase; }
+    tr:hover td { background: var(--surface2); cursor: pointer; }
+    .sev { font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 6px; font-size: 0.75rem; }
+    .sev-High { background: #450a0a; color: #fca5a5; }
+    .sev-Medium { background: #451a03; color: #fcd34d; }
+    .sev-Low { background: #14532d; color: #86efac; }
+    .type-pill {
+      background: var(--surface2);
+      padding: 0.15rem 0.5rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: ui-monospace, monospace;
+    }
+    .pagination {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 1rem;
+      color: var(--muted);
+      font-size: 0.875rem;
+    }
+    .pagination button {
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .pagination button:disabled { opacity: 0.4; cursor: not-allowed; }
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.65);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+    .modal-overlay.open { display: flex; }
+    .modal {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      max-width: 720px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      padding: 1.5rem;
+    }
+    .modal h3 { margin-bottom: 0.5rem; }
+    .modal .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 1rem; }
+    .modal section { margin-top: 1rem; }
+    .modal section h4 { font-size: 0.8rem; color: var(--muted); text-transform: uppercase; margin-bottom: 0.4rem; }
+    .modal pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 0.75rem;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.8rem;
+      font-family: ui-monospace, monospace;
+    }
+    .modal-close {
+      float: right;
+      background: none;
+      border: none;
+      color: var(--muted);
+      font-size: 1.25rem;
+      cursor: pointer;
+    }
+    .config-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 0.75rem;
+    }
+    .config-item { font-size: 0.85rem; }
+    .config-item span { display: block; color: var(--muted); font-size: 0.75rem; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.75rem;
+      padding: 1rem;
+      border-top: 1px solid var(--border);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1 id="pipeline-name">{{ pipeline.name }}</h1>
+      <p>Audit history &amp; monitoring dashboard · v{{ pipeline.version }}</p>
+    </div>
+    <div>
+      <span class="badge live" id="live-badge">● Live</span>
+      <span class="badge" id="refresh-badge">Auto-refresh 5s</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="cards" id="stat-cards"></div>
+
+    <div class="grid-2">
+      <div class="panel">
+        <h2>Error type distribution</h2>
+        <div class="chart-wrap"><canvas id="chart-types"></canvas></div>
+      </div>
+      <div class="panel">
+        <h2>Severity breakdown</h2>
+        <div class="chart-wrap"><canvas id="chart-severity"></canvas></div>
+      </div>
+    </div>
+
+    <div class="panel" style="margin-bottom:1.5rem">
+      <h2>Pipeline configuration</h2>
+      <div class="config-grid" id="config-grid"></div>
+    </div>
+
+    <div class="panel audit-section">
+      <h2>Audit history</h2>
+      <div class="audit-toolbar">
+        <input type="search" id="search" placeholder="Search file, type, root cause…" />
+        <select id="filter-type"><option value="">All error types</option></select>
+        <select id="filter-severity">
+          <option value="">All severities</option>
+          <option value="High">High</option>
+          <option value="Medium">Medium</option>
+          <option value="Low">Low</option>
+        </select>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>File</th>
+            <th>Error type</th>
+            <th>Label</th>
+            <th>Severity</th>
+            <th>Root cause (excerpt)</th>
+          </tr>
+        </thead>
+        <tbody id="audit-body"></tbody>
+      </table>
+      <div class="pagination">
+        <span id="page-info">—</span>
+        <div>
+          <button id="prev-btn">Previous</button>
+          <button id="next-btn">Next</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>Auto-updates as new logs are analyzed · RAG memory + SQLite audit trail</footer>
+
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <button class="modal-close" id="modal-close" aria-label="Close">×</button>
+      <h3 id="modal-title">Analysis detail</h3>
+      <div class="meta" id="modal-meta"></div>
+      <section><h4>Root cause</h4><p id="modal-cause"></p></section>
+      <section><h4>Recommended fix</h4><p id="modal-fix"></p></section>
+      <section><h4>Error excerpt</h4><pre id="modal-error"></pre></section>
+    </div>
+  </div>
+
+  <script>
+    let offset = 0;
+    const limit = 20;
+    let total = 0;
+    let typeChart = null;
+    let sevChart = null;
+
+    const sevClass = (s) => `sev sev-${s || "Medium"}`;
+
+    async function loadDashboard() {
+      const res = await fetch("/api/dashboard");
+      const data = await res.json();
+      renderStats(data);
+      renderConfig(data);
+      renderCharts(data.stats);
+      populateTypeFilter(data.error_types);
+    }
+
+    function renderStats(data) {
+      const s = data.stats;
+      document.getElementById("stat-cards").innerHTML = `
+        <div class="card"><div class="label">Total analyses</div><div class="value">${s.total_analyses}</div></div>
+        <div class="card"><div class="label">Error types seen</div><div class="value">${Object.keys(s.by_error_type).length}</div></div>
+        <div class="card"><div class="label">RAG memory</div><div class="value">${s.rag_available ? "Active" : "Fallback"}</div><div class="sub">${data.rag.enabled ? "Vector store" : "Disabled"}</div></div>
+        <div class="card"><div class="label">LLM</div><div class="value" style="font-size:1rem">${data.llm.provider}</div><div class="sub">${data.llm.model}</div></div>
+        <div class="card"><div class="label">Last analysis</div><div class="value" style="font-size:0.95rem">${s.latest_timestamp ? new Date(s.latest_timestamp).toLocaleString() : "—"}</div></div>
+      `;
+    }
+
+    function renderConfig(data) {
+      const p = data.pipeline;
+      document.getElementById("config-grid").innerHTML = `
+        <div class="config-item"><span>Environment</span>${p.environment}</div>
+        <div class="config-item"><span>Airflow</span>${p.airflow_version}</div>
+        <div class="config-item"><span>Executor</span>${p.executor}</div>
+        <div class="config-item"><span>DAG ID</span>${p.dag_id}</div>
+        <div class="config-item"><span>Embeddings</span>${data.embeddings.provider}/${data.embeddings.model}</div>
+        <div class="config-item"><span>RAG top-K</span>${data.rag.top_k}</div>
+      `;
+    }
+
+    function renderCharts(stats) {
+      const typeLabels = Object.keys(stats.by_error_type);
+      const typeValues = Object.values(stats.by_error_type);
+      const sevLabels = Object.keys(stats.by_severity);
+      const sevValues = Object.values(stats.by_severity);
+      const colors = ["#3b82f6","#06b6d4","#8b5cf6","#f59e0b","#ef4444","#22c55e","#ec4899","#64748b"];
+
+      if (typeChart) typeChart.destroy();
+      typeChart = new Chart(document.getElementById("chart-types"), {
+        type: "bar",
+        data: { labels: typeLabels, datasets: [{ label: "Count", data: typeValues, backgroundColor: colors }] },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { color: "#8b9cb3" } }, x: { ticks: { color: "#8b9cb3", maxRotation: 45 } } } }
+      });
+
+      if (sevChart) sevChart.destroy();
+      sevChart = new Chart(document.getElementById("chart-severity"), {
+        type: "doughnut",
+        data: {
+          labels: sevLabels.length ? sevLabels : ["None"],
+          datasets: [{ data: sevValues.length ? sevValues : [0], backgroundColor: ["#ef4444","#f59e0b","#22c55e","#64748b"] }]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: "#e7ecf3" } } } }
+      });
+    }
+
+    function populateTypeFilter(types) {
+      const sel = document.getElementById("filter-type");
+      const current = sel.value;
+      sel.innerHTML = '<option value="">All error types</option>' +
+        types.map(t => `<option value="${t.id}">${t.label}</option>`).join("");
+      sel.value = current;
+    }
+
+    async function loadHistory() {
+      const params = new URLSearchParams({ limit, offset });
+      const search = document.getElementById("search").value.trim();
+      const error_type = document.getElementById("filter-type").value;
+      const severity = document.getElementById("filter-severity").value;
+      if (search) params.set("search", search);
+      if (error_type) params.set("error_type", error_type);
+      if (severity) params.set("severity", severity);
+
+      const res = await fetch("/api/history?" + params);
+      const data = await res.json();
+      total = data.total;
+      const tbody = document.getElementById("audit-body");
+      if (!data.items.length) {
+        tbody.innerHTML = '<tr><td colspan="6" style="color:var(--muted);text-align:center;padding:2rem">No audit records yet. Run the analyzer or drop logs into the watch folder.</td></tr>';
+      } else {
+        tbody.innerHTML = data.items.map(row => `
+          <tr data-id="${row.id}">
+            <td>${new Date(row.timestamp).toLocaleString()}</td>
+            <td>${row.file_name}</td>
+            <td><span class="type-pill">${row.error_type}</span></td>
+            <td>${row.error_label}</td>
+            <td><span class="${sevClass(row.severity)}">${row.severity}</span></td>
+            <td>${(row.root_cause || "").slice(0, 80)}${row.root_cause?.length > 80 ? "…" : ""}</td>
+          </tr>
+        `).join("");
+        tbody.querySelectorAll("tr[data-id]").forEach(tr => {
+          tr.addEventListener("click", () => openDetail(tr.dataset.id));
+        });
+      }
+      document.getElementById("page-info").textContent =
+        `Showing ${offset + 1}–${Math.min(offset + limit, total)} of ${total}`;
+      document.getElementById("prev-btn").disabled = offset === 0;
+      document.getElementById("next-btn").disabled = offset + limit >= total;
+    }
+
+    async function openDetail(id) {
+      const res = await fetch("/api/history/" + id);
+      const row = await res.json();
+      document.getElementById("modal-title").textContent = row.error_label;
+      document.getElementById("modal-meta").textContent =
+        `${row.file_name} · ${row.error_type} · ${new Date(row.timestamp).toLocaleString()} · ${row.severity}`;
+      document.getElementById("modal-cause").textContent = row.root_cause;
+      document.getElementById("modal-fix").textContent = row.fix;
+      document.getElementById("modal-error").textContent = row.error_text;
+      document.getElementById("modal").classList.add("open");
+    }
+
+    document.getElementById("modal-close").onclick = () =>
+      document.getElementById("modal").classList.remove("open");
+    document.getElementById("modal").onclick = (e) => {
+      if (e.target.id === "modal") document.getElementById("modal").classList.remove("open");
+    };
+    document.getElementById("prev-btn").onclick = () => { offset = Math.max(0, offset - limit); loadHistory(); };
+    document.getElementById("next-btn").onclick = () => { offset += limit; loadHistory(); };
+    document.getElementById("search").addEventListener("input", () => { offset = 0; loadHistory(); });
+    document.getElementById("filter-type").addEventListener("change", () => { offset = 0; loadHistory(); });
+    document.getElementById("filter-severity").addEventListener("change", () => { offset = 0; loadHistory(); });
+
+    async function refresh() {
+      await loadDashboard();
+      await loadHistory();
+    }
+    refresh();
+    setInterval(refresh, 5000);
+  </script>
+</body>
+</html>

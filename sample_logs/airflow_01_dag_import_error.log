@@ -1,0 +1,7 @@
+2026-05-30 08:00:01 INFO Loading DAGs from /opt/airflow/dags
+2026-05-30 08:00:03 ERROR Failed to import DAG: sales_etl_dag
+Traceback (most recent call last):
+  File "/opt/airflow/dags/sales_etl_dag.py", line 8, in <module>
+    from airflow.providers.amazon.aws.operators.emr import EmrCreateJobFlowOperator
+ImportError: cannot import name 'EmrCreateJobFlowOperator'
+2026-05-30 08:00:03 ERROR BrokenDAGError: DAG 'sales_etl_dag' import timeout after 30s

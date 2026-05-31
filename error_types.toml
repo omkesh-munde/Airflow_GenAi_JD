@@ -1,0 +1,91 @@
+# 15 distinct Airflow error categories — order matters: more specific types first.
+
+[[error_types]]
+id = "kubernetes_pod_failure"
+label = "Kubernetes Pod Failure"
+agent = "infra"
+keywords = ["kubernetesexecutor", "pod failed", "pod evicted", "pod phase failed", "container oomkilled", "backoff limit exceeded"]
+
+[[error_types]]
+id = "sensor_timeout"
+label = "Sensor Poke Timeout"
+agent = "infra"
+keywords = ["sensor has timed out", "sensoroperator", "poke timeout", "reschedule mode", "soft fail sensor", "s3keysensor poke"]
+
+[[error_types]]
+id = "worker_oom"
+label = "Worker OOM / Memory Kill"
+agent = "infra"
+keywords = ["worker killed due to oom", "memory limit exceeded", "sigkill received", "out of memory"]
+
+[[error_types]]
+id = "celery_broker_disconnect"
+label = "Celery Broker Disconnect"
+agent = "infra"
+keywords = ["broker transport", "celery broker", "amqp connection", "kombu.exceptions", "broker unreachable", "redis connection reset"]
+
+[[error_types]]
+id = "dag_import_error"
+label = "DAG Import / Broken DAG"
+agent = "code"
+keywords = ["brokendagerror", "failed to import dag", "bag import error", "error importing dag", "dag import timeout"]
+
+[[error_types]]
+id = "scheduler_heartbeat"
+label = "Scheduler Heartbeat Failure"
+agent = "infra"
+keywords = ["scheduler heartbeat", "heartbeat missed", "scheduler is not running", "scheduler health check failed"]
+
+[[error_types]]
+id = "connection_not_found"
+label = "Airflow Connection Not Found"
+agent = "db"
+keywords = ["connectionnotfound", "connection not found", "undefined connection", "airflow connection"]
+
+[[error_types]]
+id = "xcom_error"
+label = "XCom Pull / Push Failure"
+agent = "code"
+keywords = ["failed to pull xcom", "xcom not found", "xcom return value", "xcomarg"]
+
+[[error_types]]
+id = "pool_unavailable"
+label = "Pool Slot Unavailable"
+agent = "infra"
+keywords = ["pool slot", "pool is full", "pool_slots exhausted", "no available pool slots"]
+
+[[error_types]]
+id = "metadata_db_error"
+label = "Metadata Database Error"
+agent = "db"
+keywords = ["metadata database", "sqlalchemy.exc", "could not connect to metadata", "airflow db unreachable"]
+
+[[error_types]]
+id = "variable_not_found"
+label = "Airflow Variable Not Found"
+agent = "code"
+keywords = ["variable does not exist", "variablenotfound", "airflow variable not found", "keyerror: variable"]
+
+[[error_types]]
+id = "dag_file_permission"
+label = "DAG File Permission / Access"
+agent = "infra"
+keywords = ["permission denied", "permissionerror", "cannot read dag", "access is denied"]
+
+[[error_types]]
+id = "dag_cycle"
+label = "DAG Cycle / Circular Dependency"
+agent = "code"
+keywords = ["cycle detected", "circular dependency", "dag cycle", "graph cycle", "topological sort failed"]
+
+[[error_types]]
+id = "upstream_failed"
+label = "Upstream Task Failure (Trigger Rule)"
+agent = "code"
+keywords = ["upstream failed", "trigger rule", "skipped because upstream", "one_failed not satisfied"]
+
+[[error_types]]
+id = "task_timeout"
+label = "Task Execution Timeout"
+agent = "infra"
+keywords = ["airflowtasktimeout", "task timed out", "execution timeout", "task instance timeout", "exceeded execution timeout"]

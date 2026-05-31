@@ -1,0 +1,4 @@
+2026-05-30 15:30:00 INFO Celery worker processing task transform_large_dataset
+2026-05-30 15:32:00 ERROR Worker killed due to OOM
+2026-05-30 15:32:01 ERROR Celery worker lost - SIGKILL received
+Exception: Memory limit exceeded (OOM) - out of memory

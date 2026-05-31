@@ -1,0 +1,4 @@
+2026-05-30 10:00:00 WARNING Scheduler heartbeat missed
+2026-05-30 10:00:30 ERROR Scheduler health check failed
+2026-05-30 10:00:31 ERROR Scheduler is not running - last scheduler heartbeat was 120 seconds ago
+Exception: Scheduler heartbeat missed - no heartbeat received

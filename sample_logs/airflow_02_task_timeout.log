@@ -1,0 +1,4 @@
+2026-05-30 09:15:00 INFO TaskInstance Finished: state=running task=extract_data
+2026-05-30 09:45:00 ERROR Task timed out after 1800 seconds
+2026-05-30 09:45:01 ERROR AirflowTaskTimeout: Task extract_data exceeded execution timeout
+Exception: Task instance timeout - timed out after 1800.0 seconds

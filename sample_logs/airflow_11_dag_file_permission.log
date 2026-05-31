@@ -1,0 +1,7 @@
+2026-05-30 18:00:00 INFO Scanning DAG folder /opt/airflow/dags
+2026-05-30 18:00:01 ERROR Permission denied reading DAG file
+Traceback (most recent call last):
+  File "dagbag.py", line 340, in process_file
+    with open(filepath) as f:
+PermissionError: [Errno 13] Permission denied: '/opt/airflow/dags/restricted_dag.py'
+ERROR: Cannot read dag folder - access is denied

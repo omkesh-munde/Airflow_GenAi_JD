@@ -1,0 +1,6 @@
+2026-05-30 16:00:00 ERROR Metadata database connection failed
+Traceback (most recent call last):
+  File "sqlalchemy/pool.py", line 362, in _checkout
+    raise exc.OperationalError("connection refused")
+sqlalchemy.exc.OperationalError: could not connect to metadata database
+ERROR: Airflow db unreachable on port 5432

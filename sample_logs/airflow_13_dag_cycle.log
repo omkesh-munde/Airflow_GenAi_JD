@@ -1,0 +1,6 @@
+2026-05-30 20:00:00 ERROR Cycle detected in DAG 'circular_pipeline'
+Traceback (most recent call last):
+  File "dagbag.py", line 520, in bag_dag
+    check_cycle(dag)
+Exception: Circular dependency detected - DAG cycle in graph
+ERROR: Topological sort failed - cycle detected between task_a and task_b

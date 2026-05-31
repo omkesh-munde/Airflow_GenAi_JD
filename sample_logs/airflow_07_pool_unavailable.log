@@ -1,0 +1,4 @@
+2026-05-30 14:00:00 INFO Scheduling task heavy_spark_job
+2026-05-30 14:00:01 ERROR No available pool slots for pool 'spark_pool'
+2026-05-30 14:00:02 ERROR Pool is full - pool_slots exhausted (128/128 in use)
+Exception: Pool not found or pool slot unavailable for task instance

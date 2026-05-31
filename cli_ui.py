@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
 
@@ -13,40 +13,48 @@ from rich.text import Text
 
 @dataclass(frozen=True)
 class ExecutionResult:
-    """
-    UI-friendly payload for one processed log.
-
-    Keeping this structure independent from log/agent internals makes it easy to
-    replace terminal rendering with an HTML/web renderer later.
-    """
-
     file_path: Path
     error_type: str
+    error_label: str
     root_cause: str
     fix: str
     severity: str
     timestamp: datetime
+    rag_match_count: int = 0
+    rag_available: bool = False
 
 
 class CliUI:
-    """
-    Terminal renderer for the prototype.
-
-    This class is intentionally focused only on presentation so future UI channels
-    (HTML, API, dashboard) can reuse the same processing pipeline.
-    """
-
     def __init__(self) -> None:
         self.console = Console()
         self._unicode_ok = self._supports_unicode_output()
 
-    # ---------- Top-level status banners ----------
-    def show_startup(self, logs_dir: Path) -> None:
-        title = Text(f"{self._icon('rocket')} AI Log Analyzer Started", style="bold cyan")
+    def show_web_dashboard(self, host: str, port: int) -> None:
+        url = f"http://{host}:{port}"
+        self.console.print(
+            Panel.fit(
+                f"Audit dashboard: [bold cyan]{url}[/bold cyan]\n"
+                "View live stats, charts, and full audit history.",
+                title="[bold green]Web Dashboard[/bold green]",
+                border_style="green",
+            )
+        )
+
+    def show_startup(
+        self,
+        logs_dir: Path,
+        pipeline_name: str,
+        error_type_count: int,
+        rag_enabled: bool,
+        llm_provider: str,
+    ) -> None:
+        title = Text(f"{self._icon('rocket')} {pipeline_name}", style="bold cyan")
+        rag_status = "active" if rag_enabled else "disabled (SQLite keyword fallback)"
         subtitle = (
             f"Watching: {logs_dir.resolve()}\n"
-            "Drop new .log files to analyze or use --simulate.\n"
-            "Press Ctrl+C to stop."
+            f"Error taxonomy: {error_type_count} Airflow types | LLM: {llm_provider}\n"
+            f"RAG memory: {rag_status}\n"
+            "Drop new .log files or use --simulate. Ctrl+C to stop."
         )
         self.console.print(Panel.fit(subtitle, title=title, border_style="cyan"))
 
@@ -55,7 +63,6 @@ class CliUI:
             Panel.fit(f"{self._icon('stop')} Stopping watcher...", border_style="yellow")
         )
 
-    # ---------- Core result rendering ----------
     def show_result(self, result: ExecutionResult) -> None:
         emoji = self._type_emoji(result.error_type)
         sev_style = self._severity_style(result.severity)
@@ -65,11 +72,17 @@ class CliUI:
         summary.add_column()
         summary.add_row(f"{self._icon('file')} File", result.file_path.name)
         summary.add_row(f"{self._icon('tag')} Type", f"{emoji} {result.error_type}")
+        summary.add_row("Label", result.error_label)
         summary.add_row(
             f"{self._icon('clock')} Timestamp", result.timestamp.strftime("%Y-%m-%d %H:%M:%S")
         )
         summary.add_row(
             f"{self._icon('fire')} Severity", f"[{sev_style}]{result.severity}[/{sev_style}]"
+        )
+        summary.add_row(
+            "RAG matches",
+            f"{result.rag_match_count} similar past case(s)"
+            + (" (vector store)" if result.rag_available else " (fallback)"),
         )
 
         body = Table.grid(padding=(0, 1))
@@ -90,16 +103,32 @@ class CliUI:
             )
         )
 
-    # ---------- Visual mapping helpers ----------
     @staticmethod
     def _type_color(error_type: str) -> str:
-        m = {"db": "blue", "infra": "red", "code": "magenta", "unknown": "yellow"}
-        return m.get((error_type or "").lower(), "white")
+        prefix_map = {
+            "dag": "magenta",
+            "task": "red",
+            "scheduler": "yellow",
+            "connection": "blue",
+            "xcom": "cyan",
+            "sensor": "orange3",
+            "pool": "purple",
+            "worker": "red",
+            "metadata": "blue",
+            "variable": "magenta",
+            "dag_file": "yellow",
+            "celery": "red",
+            "upstream": "magenta",
+            "kubernetes": "red",
+            "unknown": "yellow",
+        }
+        for prefix, color in prefix_map.items():
+            if error_type.startswith(prefix):
+                return color
+        return "white"
 
     def _type_emoji(self, error_type: str) -> str:
-        m = {"db": "db", "infra": "infra", "code": "code", "unknown": "unknown"}
-        key = m.get((error_type or "").lower(), "unknown")
-        return self._emoji_or_ascii(key, self._unicode_ok)
+        return self._emoji_or_ascii("tag", self._unicode_ok)
 
     @staticmethod
     def _severity_style(severity: str) -> str:
@@ -114,9 +143,6 @@ class CliUI:
 
     @staticmethod
     def _supports_unicode_output() -> bool:
-        """
-        Check if terminal encoding can handle emoji glyphs.
-        """
         encoding = (sys.stdout.encoding or "").lower()
         if "utf" in encoding:
             return True
@@ -137,10 +163,6 @@ class CliUI:
             "fire": "🔥",
             "search": "🔍",
             "fix": "🛠️",
-            "db": "🗄️",
-            "infra": "🧱",
-            "code": "🐍",
-            "unknown": "❓",
         }
         ascii_map = {
             "rocket": "[START]",
@@ -151,13 +173,8 @@ class CliUI:
             "fire": "[SEV]",
             "search": "[CAUSE]",
             "fix": "[FIX]",
-            "db": "[DB]",
-            "infra": "[INFRA]",
-            "code": "[CODE]",
-            "unknown": "[?]",
         }
-        return unicode_map[name] if unicode_ok else ascii_map[name]
+        return unicode_map.get(name, "•") if unicode_ok else ascii_map.get(name, "[*]")
 
     def _icon(self, name: str) -> str:
         return self._emoji_or_ascii(name, self._unicode_ok)
-

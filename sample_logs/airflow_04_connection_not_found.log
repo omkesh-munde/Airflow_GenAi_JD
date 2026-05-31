@@ -1,0 +1,6 @@
+2026-05-30 11:00:00 INFO Executing task: load_to_redshift
+2026-05-30 11:00:02 ERROR Connection not found: conn_id='redshift_prod'
+Traceback (most recent call last):
+  File "task.py", line 45, in execute
+    hook = BaseHook.get_connection(self.conn_id)
+Exception: Airflow connection 'redshift_prod' is undefined connection
