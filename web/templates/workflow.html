@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>{{ pipeline.name }} — Workflow</title>
+  <style>
+    :root {
+      --bg: #0b0f17;
+      --surface: #131c2b;
+      --surface2: #1b283c;
+      --border: #2a3a52;
+      --text: #e7ecf3;
+      --muted: #8b9cb3;
+      --accent: #3b82f6;
+      --accent2: #06b6d4;
+      --flow-ctrl: #3b82f6;
+      --flow-rag: #06b6d4;
+      --flow-cfg: #a78bfa;
+      --flow-llm: #22c55e;
+      --flow-store: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      background:
+        radial-gradient(1200px 600px at 15% -10%, rgba(59,130,246,0.12), transparent 60%),
+        radial-gradient(1000px 500px at 100% 110%, rgba(6,182,212,0.10), transparent 55%),
+        var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 30;
+      backdrop-filter: blur(8px);
+      background: linear-gradient(135deg, rgba(30,58,95,0.85) 0%, rgba(15,20,25,0.85) 100%);
+      border-bottom: 1px solid var(--border);
+      padding: 1rem 1.75rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+    header h1 { font-size: 1.25rem; font-weight: 700; letter-spacing: 0.2px; }
+    header p { color: var(--muted); font-size: 0.82rem; margin-top: 0.15rem; }
+    .head-right { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+    .btn {
+      display: inline-flex; align-items: center; gap: 0.5rem;
+      padding: 0.5rem 0.95rem; border-radius: 999px;
+      font-size: 0.85rem; font-weight: 600; cursor: pointer;
+      color: var(--text); text-decoration: none;
+      background: var(--surface2); border: 1px solid var(--border);
+      transition: transform 0.15s ease, border-color 0.2s ease, background 0.2s ease;
+    }
+    .btn:hover { transform: translateY(-1px); border-color: var(--accent2); background: #21304a; }
+    .btn.primary {
+      background: linear-gradient(110deg, var(--accent), var(--accent2));
+      border-color: transparent; color: #fff;
+      box-shadow: 0 4px 16px rgba(59,130,246,0.35);
+    }
+
+    .legend {
+      display: flex; gap: 1rem; flex-wrap: wrap;
+      padding: 0.7rem 1.75rem; align-items: center;
+      border-bottom: 1px solid var(--border);
+      background: rgba(19,28,43,0.6);
+      font-size: 0.78rem; color: var(--muted);
+    }
+    .legend .item { display: inline-flex; align-items: center; gap: 0.4rem; }
+    .legend .swatch { width: 22px; height: 4px; border-radius: 2px; display: inline-block; }
+    .legend .spacer { flex: 1; }
+
+    .stage { position: relative; padding: 0.75rem 1.75rem 0; }
+    .stage-bar { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .stage-chip {
+      font-size: 0.72rem; color: var(--muted);
+      background: var(--surface); border: 1px solid var(--border);
+      padding: 0.25rem 0.6rem; border-radius: 999px;
+    }
+
+    .viewport {
+      position: relative;
+      width: 100%;
+      overflow: auto;
+      padding: 1.5rem;
+      cursor: grab;
+    }
+    .viewport.grabbing { cursor: grabbing; }
+
+    .canvas {
+      position: relative;
+      transform-origin: 0 0;
+      transition: transform 0.12s ease-out;
+    }
+
+    svg.edges { position: absolute; inset: 0; pointer-events: none; overflow: visible; }
+    .edge-base { fill: none; stroke-opacity: 0.22; stroke-width: 2.5; }
+    .edge-flow { fill: none; stroke-width: 2.5; stroke-linecap: round; }
+
+    .node {
+      position: absolute;
+      border-radius: 14px;
+      background: linear-gradient(160deg, var(--surface) 0%, var(--surface2) 100%);
+      border: 1px solid var(--border);
+      padding: 0.6rem 0.7rem;
+      display: flex; gap: 0.55rem; align-items: center;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      overflow: hidden;
+      animation: nodeIn 0.5s both;
+    }
+    .node::after {
+      content: ""; position: absolute; inset: 0;
+      background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.06) 50%, transparent 70%);
+      transform: translateX(-120%);
+      animation: shimmer 5.5s ease-in-out infinite;
+    }
+    @keyframes shimmer { 0%,60% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+    @keyframes nodeIn { from { opacity: 0; } to { opacity: 1; } }
+
+    .node { cursor: help; transition: transform 0.16s ease, box-shadow 0.2s ease, border-color 0.2s ease; }
+    .node:hover {
+      transform: scale(1.07);
+      border-color: var(--accent2);
+      box-shadow: 0 12px 34px rgba(0,0,0,0.55), 0 0 22px rgba(6,182,212,0.4);
+      z-index: 25;
+    }
+    .node.dim { opacity: 0.32; filter: saturate(0.5); }
+
+    /* edge focus highlighting */
+    .edges.focus .edge-base { stroke-opacity: 0.05; }
+    .edges.focus .edge-flow { stroke-opacity: 0.08; }
+    .edges.focus .packet { opacity: 0.1; }
+    .edges.focus .edge-base.lit { stroke-opacity: 0.45; }
+    .edges.focus .edge-flow.lit { stroke-opacity: 1; stroke-width: 3.6; }
+    .edges.focus .packet.lit { opacity: 1; }
+
+    /* tooltip */
+    .tooltip {
+      position: fixed;
+      z-index: 60;
+      max-width: 320px;
+      background: linear-gradient(165deg, #16203100, #0c121cee), rgba(16,22,33,0.97);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 0.85rem 0.95rem;
+      box-shadow: 0 18px 44px rgba(0,0,0,0.6);
+      opacity: 0;
+      transform: translateY(6px) scale(0.98);
+      transition: opacity 0.14s ease, transform 0.14s ease;
+      pointer-events: none;
+      backdrop-filter: blur(6px);
+    }
+    .tooltip.show { opacity: 1; transform: none; }
+    .tooltip .tt-head { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.4rem; }
+    .tooltip .tt-dot { width: 10px; height: 10px; border-radius: 50%; flex: 0 0 10px; box-shadow: 0 0 8px currentColor; }
+    .tooltip .tt-title { font-size: 0.92rem; font-weight: 700; }
+    .tooltip .tt-file { font-size: 0.7rem; color: var(--muted); font-family: ui-monospace, monospace; margin-bottom: 0.5rem; }
+    .tooltip .tt-body { font-size: 0.8rem; color: #cdd7e5; line-height: 1.5; }
+    .tooltip .tt-flow {
+      margin-top: 0.55rem; padding-top: 0.5rem; border-top: 1px dashed var(--border);
+      font-size: 0.76rem; color: var(--accent2); display: flex; gap: 0.4rem; align-items: flex-start;
+    }
+    .tooltip .tt-flow b { color: #7dd3fc; font-weight: 600; }
+    .tooltip .tt-arrow { flex: 0 0 auto; }
+
+    .node .ic {
+      width: 40px; height: 40px; flex: 0 0 40px;
+      border-radius: 10px; display: grid; place-items: center;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.07);
+      position: relative;
+    }
+    .node .ic img { width: 24px; height: 24px; display: block; }
+    .node .ic svg { width: 24px; height: 24px; }
+    .node .tx { min-width: 0; }
+    .node .tx .t { font-size: 0.82rem; font-weight: 650; line-height: 1.15; }
+    .node .tx .s { font-size: 0.68rem; color: var(--muted); margin-top: 0.12rem; font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+    /* node accent rings by group */
+    .node.g-ctrl  { box-shadow: 0 0 0 1px rgba(59,130,246,0.25), 0 6px 20px rgba(0,0,0,0.35); }
+    .node.g-rag   { box-shadow: 0 0 0 1px rgba(6,182,212,0.25), 0 6px 20px rgba(0,0,0,0.35); }
+    .node.g-cfg   { box-shadow: 0 0 0 1px rgba(167,139,250,0.25), 0 6px 20px rgba(0,0,0,0.35); }
+    .node.g-llm   { box-shadow: 0 0 0 1px rgba(34,197,94,0.25), 0 6px 20px rgba(0,0,0,0.35); }
+    .node.g-store { box-shadow: 0 0 0 1px rgba(245,158,11,0.25), 0 6px 20px rgba(0,0,0,0.35); }
+
+    .node.pulse { animation: nodeIn 0.5s both, pulse 2.6s ease-in-out infinite; }
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 1px rgba(6,182,212,0.3), 0 6px 20px rgba(0,0,0,0.35); }
+      50% { box-shadow: 0 0 0 2px rgba(6,182,212,0.55), 0 0 26px rgba(6,182,212,0.35); }
+    }
+
+    /* spinning ring for vector DB */
+    .ring { position: absolute; inset: -4px; border-radius: 12px; border: 1.5px dashed rgba(6,182,212,0.5); animation: spin 7s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .float { animation: floaty 3.2s ease-in-out infinite; }
+    @keyframes floaty { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+
+    .packet { filter: drop-shadow(0 0 5px currentColor); }
+
+    .zoom {
+      position: fixed; right: 18px; bottom: 18px; z-index: 40;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .zoom button {
+      width: 40px; height: 40px; border-radius: 10px;
+      background: var(--surface2); border: 1px solid var(--border);
+      color: var(--text); font-size: 1.2rem; cursor: pointer;
+      display: grid; place-items: center;
+    }
+    .zoom button:hover { border-color: var(--accent2); }
+
+    .hint { position: fixed; left: 18px; bottom: 14px; color: var(--muted); font-size: 0.72rem; z-index: 40; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .node::after, .ring, .float, .workflow-btn { animation: none !important; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div>
+      <h1>{{ pipeline.name }} — Pipeline Workflow</h1>
+      <p>Live data flow across agents, Python modules, RAG memory &amp; vector store · v{{ pipeline.version }}</p>
+    </div>
+    <div class="head-right">
+      <button class="btn" id="toggle-anim">⏸ Pause flow</button>
+      <a class="btn primary" href="/">← Back to Dashboard</a>
+    </div>
+  </header>
+
+  <div class="legend">
+    <span class="item"><span class="swatch" style="background:var(--flow-ctrl)"></span> Control / log flow</span>
+    <span class="item"><span class="swatch" style="background:var(--flow-rag)"></span> RAG retrieval</span>
+    <span class="item"><span class="swatch" style="background:var(--flow-cfg)"></span> Context injection</span>
+    <span class="item"><span class="swatch" style="background:var(--flow-llm)"></span> LLM reasoning</span>
+    <span class="item"><span class="swatch" style="background:var(--flow-store)"></span> Persistence</span>
+    <span class="spacer"></span>
+    <span class="item">Pipeline: <code style="color:var(--text)">extract → classify → route → RAG → analyze → store → serve</code></span>
+  </div>
+
+  <div class="stage">
+    <div class="stage-bar">
+      <span class="stage-chip">1 · Trigger</span>
+      <span class="stage-chip">2 · Watch &amp; ingest</span>
+      <span class="stage-chip">3 · Extract &amp; classify</span>
+      <span class="stage-chip">4 · Route</span>
+      <span class="stage-chip">5 · Context + RAG</span>
+      <span class="stage-chip">6 · Agent + LLM</span>
+      <span class="stage-chip">7 · Persist</span>
+      <span class="stage-chip">8 · Serve</span>
+    </div>
+  </div>
+
+  <div class="viewport" id="viewport">
+    <div class="canvas" id="canvas">
+      <svg class="edges" id="edges"></svg>
+      <div id="nodes"></div>
+    </div>
+  </div>
+
+  <div class="zoom">
+    <button id="zoom-in" title="Zoom in">+</button>
+    <button id="zoom-reset" title="Reset">⤢</button>
+    <button id="zoom-out" title="Zoom out">−</button>
+  </div>
+  <div class="hint">Drag to pan · scroll / buttons to zoom</div>
+
+  <script>
+    const CANVAS_W = 2040, CANVAS_H = 1040;
+
+    // Simple Icons CDN (official brand logos). Falls back to inline SVG on error.
+    const LOGO = (slug, color) => `https://cdn.simpleicons.org/${slug}/${color || 'white'}`;
+
+    // Inline SVG icon set for modules that have no brand logo
+    const SVG = {
+      folder: '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>',
+      eye: '<svg viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg>',
+      scissors: '<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M20 4 8.12 15.88M14.47 14.48 20 20M8.12 8.12 12 12"/></svg>',
+      filter: '<svg viewBox="0 0 24 24" fill="none" stroke="#60a5fa" stroke-width="2"><path d="M22 3H2l8 9.46V19l4 2v-8.54L22 3z"/></svg>',
+      route: '<svg viewBox="0 0 24 24" fill="none" stroke="#3b82f6" stroke-width="2"><circle cx="6" cy="19" r="3"/><circle cx="18" cy="5" r="3"/><path d="M9 19h6a3 3 0 0 0 3-3V8M6 16V8a3 3 0 0 1 3-3h6"/></svg>',
+      bot: '<svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M12 8V4M8 2h8"/><circle cx="8.5" cy="14" r="1.2" fill="#22c55e"/><circle cx="15.5" cy="14" r="1.2" fill="#22c55e"/></svg>',
+      brain: '<svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><path d="M9 3a3 3 0 0 0-3 3 3 3 0 0 0-1 5 3 3 0 0 0 1 5 3 3 0 0 0 3 3 2.5 2.5 0 0 0 3-2.5V5.5A2.5 2.5 0 0 0 9 3zM15 3a3 3 0 0 1 3 3 3 3 0 0 1 1 5 3 3 0 0 1-1 5 3 3 0 0 1-3 3 2.5 2.5 0 0 1-3-2.5V5.5A2.5 2.5 0 0 1 15 3z"/></svg>',
+      gear: '<svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-2.82 1.17V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 3.6 15H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.6h.09A1.65 1.65 0 0 0 11 3.09V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 20.4 9v.09A1.65 1.65 0 0 0 21 11h.09a2 2 0 1 1 0 4z"/></svg>',
+      vector: '<svg viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="1.8"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v6c0 1.66 3.58 3 8 3s8-1.34 8-3V5M4 11v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/><circle cx="8" cy="11" r="0.9" fill="#06b6d4"/><circle cx="14" cy="12" r="0.9" fill="#06b6d4"/><circle cx="11" cy="17" r="0.9" fill="#06b6d4"/></svg>',
+      doc: '<svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h6"/></svg>',
+      browser: '<svg viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18"/><circle cx="6" cy="6.5" r="0.6" fill="#06b6d4"/><circle cx="8.4" cy="6.5" r="0.6" fill="#06b6d4"/></svg>',
+    };
+
+    // group -> flow color
+    const COLOR = { ctrl: '#3b82f6', rag: '#06b6d4', cfg: '#a78bfa', llm: '#22c55e', store: '#f59e0b' };
+
+    // NODES: x,y are top-left on the logical canvas
+    const NODES = [
+      // spine
+      { id:'dag',      x:24,   y:450, t:'Airflow DAG',     s:'log_ai_pipeline_dag.py', g:'ctrl', logo: LOGO('apacheairflow','06b6d4'),
+        d:'Apache Airflow DAG that schedules the pipeline (@hourly) and runs one bounded pass via <b>main.py --simulate</b> using a PythonOperator.',
+        flow:'Triggers the orchestrator (main.py) to start a run.' },
+      { id:'main',     x:230,  y:450, t:'Orchestrator',    s:'main.py',                g:'ctrl', logo: LOGO('python','3776AB'),
+        d:'The entry point. Boots the log watcher + Flask dashboard, then drives every new log through the full pipeline: extract → classify → RAG → analyze → store.',
+        flow:'Drops/streams log files into the watch folder.' },
+      { id:'logs',     x:436,  y:450, t:'Watch folder',    s:'logs/*.log',             g:'ctrl', svg: SVG.folder,
+        d:'The <b>logs/</b> directory. New <b>*.log</b> files appear here — copied from sample_logs in simulate mode, or written by a real Airflow deployment.',
+        flow:'New files are detected by the watchdog observer.' },
+      { id:'watcher',  x:642,  y:450, t:'Log Watcher',     s:'log_watcher.py · watchdog', g:'ctrl', svg: SVG.eye,
+        d:'Uses <b>watchdog.Observer</b> to fire on file creation, waits until the file size is stable to avoid partial reads, then reads the raw log text.',
+        flow:'Passes the raw log text to the error extractor.' },
+      { id:'extract',  x:848,  y:450, t:'Extract error',   s:'extract_error_block()',  g:'ctrl', svg: SVG.scissors,
+        d:'Scans the log for the first <b>ERROR / Traceback / Exception</b> keyword and returns everything from there to end-of-file — the focused error block.',
+        flow:'Sends the trimmed error block to the classifier.' },
+      { id:'classify', x:1054, y:450, t:'Classifier',      s:'classifier.py · 15 types', g:'ctrl', svg: SVG.filter,
+        d:'Keyword-matches the error text against <b>error_types.toml</b> (15 Airflow error categories) and returns an <b>error_type_id</b> + human label.',
+        flow:'Feeds the type to the router AND the error block to RAG retrieval.' },
+      { id:'router',   x:1260, y:450, t:'Agent Router',    s:'agents/router.py',       g:'ctrl', svg: SVG.route,
+        d:'Maps the error type to an agent bucket — <b>db / infra / code</b> — and builds the matching specialist agent from agents.toml.',
+        flow:'Selects which specialist agent will reason about the error.' },
+      { id:'agent',    x:1466, y:450, t:'Specialist Agent',s:'Code · DB · Infra',      g:'llm',  svg: SVG.bot,
+        d:'The chosen specialist agent (agents/base.py). Assembles a prompt from the <b>error + pipeline context + RAG memory</b> and asks the LLM for a structured root cause, fix and severity.',
+        flow:'Calls the LLM, then sends the analysis to memory.store().' },
+      { id:'store',    x:1672, y:450, t:'Memory.store()',  s:'memory/store.py',        g:'store', svg: SVG.gear,
+        d:'Persists the analysis. Inserts a structured row into <b>SQLite</b>, adds an embedded document to <b>Chroma</b>, and triggers the value-doc update.',
+        flow:'Fans out to SQLite, the vector DB, and the value document.' },
+      { id:'flask',    x:1672, y:760, t:'Flask API',       s:'web/app.py',             g:'rag',  logo: LOGO('flask','white'),
+        d:'Flask server exposing the dashboard and JSON APIs (<b>/api/dashboard</b>, <b>/api/history</b>). Reads analyses straight from SQLite.',
+        flow:'Serves JSON + HTML to the browser dashboard.' },
+      { id:'browser',  x:1466, y:760, t:'Dashboard UI',    s:'dashboard.html',         g:'rag',  svg: SVG.browser,
+        d:'The live dashboard: stat cards, error-type & severity charts, and a searchable audit history. Polls the Flask APIs every 5 seconds.',
+        flow:'End of the flow — what the operator sees.' },
+
+      // context cluster (above agent)
+      { id:'config',   x:1054, y:150, t:'Config loader',   s:'config.py · *.toml',     g:'cfg',  svg: SVG.gear,
+        d:'Loads <b>settings.toml</b>, <b>error_types.toml</b> and <b>agents.toml</b> into a typed Settings object shared across the whole app.',
+        flow:'Provides config to the pipeline-context builder.' },
+      { id:'pctx',     x:1260, y:150, t:'Pipeline context',s:'pipeline_context.py',    g:'cfg',  svg: SVG.brain,
+        d:'Serializes the live pipeline config (environment, Airflow version, LLM, RAG settings, error types, agents) into text injected into the agent prompt.',
+        flow:'Injects deployment context into the specialist agent.' },
+
+      // LLM cluster (above agent)
+      { id:'llmf',     x:1466, y:290, t:'LLM Factory',     s:'llm_factory.py',         g:'llm',  logo: LOGO('langchain','22c55e'),
+        d:'Builds a provider-agnostic <b>LangChain</b> chat model from settings.toml — OpenAI, Anthropic, Google, Ollama, Groq, Azure or HuggingFace.',
+        flow:'Hands the configured LLM client to the agent.' },
+      { id:'llm',      x:1466, y:130, t:'LLM',             s:'OpenAI · gpt-4o-mini',   g:'llm',  logo: LOGO('openai','white'),
+        d:'The language model. Receives the system + human prompt and returns a structured <b>AgentResponse</b> (root_cause, fix, severity).',
+        flow:'Returns the reasoning result back to the agent.' },
+
+      // RAG cluster (below)
+      { id:'retrieve', x:1054, y:760, t:'RAG retrieve',    s:'retrieve_similar()',     g:'rag',  svg: SVG.brain,
+        d:'Embeds the current error and queries the vector store for the top-K most similar past analyses (falls back to SQLite keyword overlap if embeddings are off).',
+        flow:'Supplies similar past cases as RAG context to the agent.' },
+      { id:'chroma',   x:1260, y:760, t:'Vector DB',       s:'Chroma · embeddings',    g:'rag',  svg: SVG.vector, pulse:true, ring:true,
+        d:'<b>Chroma</b> vector store (data/chroma/) holding embeddings of every past analysis for semantic similarity search. Read on retrieval, written on store.',
+        flow:'Returns nearest-neighbour matches and stores new vectors.' },
+      { id:'embed',    x:1260, y:920, t:'Embeddings',      s:'embedding_factory.py',   g:'rag',  logo: LOGO('openai','white'),
+        d:'Creates the embedding model (default <b>OpenAI text-embedding-3-small</b>) that vectorizes error text before it is stored in or queried from Chroma.',
+        flow:'Generates the vectors stored in the Chroma DB.' },
+
+      // persistence cluster (below store)
+      { id:'sqlite',   x:1672, y:920, t:'SQLite',          s:'analyses.sqlite',        g:'store', logo: LOGO('sqlite','60a5fa'),
+        d:'Structured audit trail — one row per analysis (file, type, root cause, fix, severity, timestamp). The single source of truth for the dashboard history.',
+        flow:'Read by the Flask API to power the dashboard.' },
+      { id:'valdoc',   x:1878, y:760, t:'Value doc',       s:'VALUE_PROPOSITION.md',   g:'store', svg: SVG.doc,
+        d:'<b>value_doc.py</b> regenerates VALUE_PROPOSITION.md after each run with manual-vs-automated metrics and the latest analysis summary.',
+        flow:'Produces an updated value/metrics report on disk.' },
+    ];
+
+    // EDGES: from -> to with flow group color
+    const EDGES = [
+      ['dag','main','ctrl'], ['main','logs','ctrl'], ['logs','watcher','ctrl'],
+      ['watcher','extract','ctrl'], ['extract','classify','ctrl'], ['classify','router','ctrl'],
+      ['router','agent','ctrl'],
+      ['classify','retrieve','rag'], ['retrieve','chroma','rag'], ['chroma','retrieve','rag'],
+      ['embed','chroma','rag'], ['retrieve','agent','rag'],
+      ['config','pctx','cfg'], ['pctx','agent','cfg'],
+      ['agent','llmf','llm'], ['llmf','llm','llm'], ['llm','agent','llm'],
+      ['agent','store','store'],
+      ['store','sqlite','store'], ['store','chroma','store'], ['store','valdoc','store'],
+      ['sqlite','flask','rag'], ['flask','browser','rag'],
+    ];
+
+    const NODE_W = 180, NODE_H = 64;
+    const byId = Object.fromEntries(NODES.map(n => [n.id, n]));
+
+    const nodesEl = document.getElementById('nodes');
+    const edgesEl = document.getElementById('edges');
+    const canvas = document.getElementById('canvas');
+    canvas.style.width = CANVAS_W + 'px';
+    canvas.style.height = CANVAS_H + 'px';
+    edgesEl.setAttribute('width', CANVAS_W);
+    edgesEl.setAttribute('height', CANVAS_H);
+    edgesEl.setAttribute('viewBox', `0 0 ${CANVAS_W} ${CANVAS_H}`);
+
+    // ---- render nodes ----
+    const nodeEls = {};
+    NODES.forEach((n, i) => {
+      const el = document.createElement('div');
+      el.className = 'node g-' + n.g + (n.pulse ? ' pulse' : '');
+      el.dataset.id = n.id;
+      el.style.left = n.x + 'px';
+      el.style.top = n.y + 'px';
+      el.style.width = NODE_W + 'px';
+      el.style.minHeight = NODE_H + 'px';
+      el.style.animationDelay = (i * 45) + 'ms';
+
+      const icInner = n.logo
+        ? `<img src="${n.logo}" alt="" onerror="this.replaceWith(Object.assign(document.createElement('span'),{innerHTML:'${'⚙'}'}))" />`
+        : (n.svg || SVG.gear);
+      el.innerHTML = `
+        <div class="ic">${n.ring ? '<span class="ring"></span>' : ''}<span class="${n.ring ? 'float' : ''}">${icInner}</span></div>
+        <div class="tx"><div class="t">${n.t}</div><div class="s">${n.s}</div></div>`;
+      el.addEventListener('mouseenter', () => focusNode(n, el));
+      el.addEventListener('mousemove', (e) => moveTooltip(e));
+      el.addEventListener('mouseleave', () => blurNode());
+      nodesEl.appendChild(el);
+      nodeEls[n.id] = el;
+    });
+
+    // ---- anchor helpers ----
+    function center(n) { return { x: n.x + NODE_W / 2, y: n.y + NODE_H / 2 }; }
+    function anchor(n, side) {
+      const c = center(n);
+      if (side === 'l') return { x: n.x, y: c.y };
+      if (side === 'r') return { x: n.x + NODE_W, y: c.y };
+      if (side === 't') return { x: c.x, y: n.y };
+      if (side === 'b') return { x: c.x, y: n.y + NODE_H };
+      return c;
+    }
+    function pickSides(a, b) {
+      const ca = center(a), cb = center(b);
+      const dx = cb.x - ca.x, dy = cb.y - ca.y;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        return dx >= 0 ? ['r', 'l'] : ['l', 'r'];
+      }
+      return dy >= 0 ? ['b', 't'] : ['t', 'b'];
+    }
+    function pathD(a, b) {
+      const [sa, sb] = pickSides(a, b);
+      const p1 = anchor(a, sa), p2 = anchor(b, sb);
+      const dx = p2.x - p1.x, dy = p2.y - p1.y;
+      let c1, c2;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        c1 = { x: p1.x + dx * 0.5, y: p1.y };
+        c2 = { x: p1.x + dx * 0.5, y: p2.y };
+      } else {
+        c1 = { x: p1.x, y: p1.y + dy * 0.5 };
+        c2 = { x: p2.x, y: p1.y + dy * 0.5 };
+      }
+      return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+    }
+
+    // ---- render edges + flowing packets ----
+    const SVGNS = 'http://www.w3.org/2000/svg';
+    let pktSpeedBase = 2.6;
+    EDGES.forEach(([from, to, g], idx) => {
+      const a = byId[from], b = byId[to];
+      if (!a || !b) return;
+      const d = pathD(a, b);
+      const col = COLOR[g];
+
+      const base = document.createElementNS(SVGNS, 'path');
+      base.setAttribute('d', d);
+      base.setAttribute('class', 'edge-base');
+      base.setAttribute('stroke', col);
+      base.dataset.from = from; base.dataset.to = to;
+      edgesEl.appendChild(base);
+
+      const flow = document.createElementNS(SVGNS, 'path');
+      flow.setAttribute('d', d);
+      flow.setAttribute('class', 'edge-flow');
+      flow.setAttribute('stroke', col);
+      flow.dataset.from = from; flow.dataset.to = to;
+      flow.setAttribute('stroke-opacity', '0.55');
+      flow.setAttribute('stroke-dasharray', '6 12');
+      const dash = document.createElementNS(SVGNS, 'animate');
+      dash.setAttribute('attributeName', 'stroke-dashoffset');
+      dash.setAttribute('from', '180'); dash.setAttribute('to', '0');
+      dash.setAttribute('dur', '2.4s'); dash.setAttribute('repeatCount', 'indefinite');
+      flow.appendChild(dash);
+      edgesEl.appendChild(flow);
+
+      // unique path id for motion
+      const pid = `mp-${idx}`;
+      const mp = document.createElementNS(SVGNS, 'path');
+      mp.setAttribute('id', pid); mp.setAttribute('d', d); mp.setAttribute('fill', 'none'); mp.setAttribute('stroke', 'none');
+      edgesEl.appendChild(mp);
+
+      const dur = (pktSpeedBase + (idx % 4) * 0.35).toFixed(2);
+      const PACKETS = 2;
+      for (let k = 0; k < PACKETS; k++) {
+        const dot = document.createElementNS(SVGNS, 'circle');
+        dot.setAttribute('r', '4');
+        dot.setAttribute('fill', col);
+        dot.setAttribute('class', 'packet');
+        dot.dataset.from = from; dot.dataset.to = to;
+        dot.style.color = col;
+        const motion = document.createElementNS(SVGNS, 'animateMotion');
+        motion.setAttribute('dur', dur + 's');
+        motion.setAttribute('repeatCount', 'indefinite');
+        motion.setAttribute('begin', (k * dur / PACKETS).toFixed(2) + 's');
+        motion.setAttribute('rotate', 'auto');
+        const mpath = document.createElementNS(SVGNS, 'mpath');
+        mpath.setAttributeNS('http://www.w3.org/1999/xlink', 'href', '#' + pid);
+        mpath.setAttribute('href', '#' + pid);
+        motion.appendChild(mpath);
+        dot.appendChild(motion);
+        edgesEl.appendChild(dot);
+      }
+    });
+
+    // ---- hover: tooltip + connected-edge highlight ----
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    document.body.appendChild(tooltip);
+
+    const neighbours = (id) => {
+      const ins = [], outs = [];
+      EDGES.forEach(([f, t]) => {
+        if (f === id) outs.push(t);
+        if (t === id) ins.push(f);
+      });
+      return { ins, outs };
+    };
+
+    function focusNode(n, el) {
+      // tooltip content
+      tooltip.innerHTML = `
+        <div class="tt-head">
+          <span class="tt-dot" style="background:${COLOR[n.g]};color:${COLOR[n.g]}"></span>
+          <span class="tt-title">${n.t}</span>
+        </div>
+        <div class="tt-file">${n.s}</div>
+        <div class="tt-body">${n.d || ''}</div>
+        ${n.flow ? `<div class="tt-flow"><span class="tt-arrow">➜</span><span><b>Data flow:</b> ${n.flow}</span></div>` : ''}`;
+      tooltip.classList.add('show');
+
+      // highlight connected edges + packets, dim the rest
+      edgesEl.classList.add('focus');
+      edgesEl.querySelectorAll('.edge-base, .edge-flow, .packet').forEach(p => {
+        const lit = p.dataset.from === n.id || p.dataset.to === n.id;
+        p.classList.toggle('lit', lit);
+      });
+      // dim unrelated nodes
+      const { ins, outs } = neighbours(n.id);
+      const keep = new Set([n.id, ...ins, ...outs]);
+      Object.entries(nodeEls).forEach(([id, e]) => e.classList.toggle('dim', !keep.has(id)));
+    }
+
+    function moveTooltip(e) {
+      const pad = 16, tw = tooltip.offsetWidth, th = tooltip.offsetHeight;
+      let x = e.clientX + 18, y = e.clientY + 18;
+      if (x + tw + pad > window.innerWidth) x = e.clientX - tw - 18;
+      if (y + th + pad > window.innerHeight) y = e.clientY - th - 18;
+      tooltip.style.left = Math.max(pad, x) + 'px';
+      tooltip.style.top = Math.max(pad, y) + 'px';
+    }
+
+    function blurNode() {
+      tooltip.classList.remove('show');
+      edgesEl.classList.remove('focus');
+      edgesEl.querySelectorAll('.lit').forEach(p => p.classList.remove('lit'));
+      Object.values(nodeEls).forEach(e => e.classList.remove('dim'));
+    }
+
+    // ---- pause / play ----
+    let running = true;
+    const toggle = document.getElementById('toggle-anim');
+    toggle.onclick = () => {
+      running = !running;
+      if (running) { try { edgesEl.unpauseAnimations(); } catch(e){} toggle.textContent = '⏸ Pause flow'; }
+      else { try { edgesEl.pauseAnimations(); } catch(e){} toggle.textContent = '▶ Resume flow'; }
+      document.querySelectorAll('.node, .ring, .float').forEach(n => {
+        n.style.animationPlayState = running ? 'running' : 'paused';
+      });
+    };
+
+    // ---- zoom + pan ----
+    const viewport = document.getElementById('viewport');
+    let scale = 0.8, ox = 0, oy = 0;
+    function fitInitial() {
+      const avail = viewport.clientWidth - 48;
+      scale = Math.min(1, Math.max(0.5, avail / CANVAS_W));
+      apply();
+    }
+    function apply() { canvas.style.transform = `translate(${ox}px, ${oy}px) scale(${scale})`; }
+    document.getElementById('zoom-in').onclick = () => { scale = Math.min(1.8, scale + 0.1); apply(); };
+    document.getElementById('zoom-out').onclick = () => { scale = Math.max(0.4, scale - 0.1); apply(); };
+    document.getElementById('zoom-reset').onclick = () => { ox = 0; oy = 0; fitInitial(); };
+
+    viewport.addEventListener('wheel', (e) => {
+      if (!e.ctrlKey) return;
+      e.preventDefault();
+      scale = Math.min(1.8, Math.max(0.4, scale + (e.deltaY < 0 ? 0.08 : -0.08)));
+      apply();
+    }, { passive: false });
+
+    // drag to pan
+    let dragging = false, sx = 0, sy = 0, sScrollL = 0, sScrollT = 0;
+    viewport.addEventListener('mousedown', (e) => {
+      if (e.target.closest('.node')) return;
+      dragging = true; viewport.classList.add('grabbing');
+      sx = e.clientX; sy = e.clientY; sScrollL = viewport.scrollLeft; sScrollT = viewport.scrollTop;
+    });
+    window.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      viewport.scrollLeft = sScrollL - (e.clientX - sx);
+      viewport.scrollTop = sScrollT - (e.clientY - sy);
+    });
+    window.addEventListener('mouseup', () => { dragging = false; viewport.classList.remove('grabbing'); });
+
+    window.addEventListener('resize', fitInitial);
+    fitInitial();
+  </script>
+</body>
+</html>

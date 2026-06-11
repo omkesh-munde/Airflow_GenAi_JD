@@ -19,6 +19,10 @@ def create_app(memory: AnalysisMemory) -> Flask:
     def dashboard() -> str:
         return render_template("dashboard.html", pipeline=SETTINGS.pipeline)
 
+    @app.get("/workflow")
+    def workflow() -> str:
+        return render_template("workflow.html", pipeline=SETTINGS.pipeline)
+
     @app.get("/api/dashboard")
     def api_dashboard():
         mem: AnalysisMemory = app.config["MEMORY"]

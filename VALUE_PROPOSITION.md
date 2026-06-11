@@ -1,6 +1,6 @@
 # Value Proposition — Airflow Log AI Analyzer
 
-> Auto-generated after each analysis. Last updated: **2026-05-31T13:56:58+00:00** (UTC)
+> Auto-generated after each analysis. Last updated: **2026-06-11T05:33:40+00:00** (UTC)
 
 ## Executive summary
 
@@ -39,8 +39,8 @@ It replaces slow, inconsistent manual log reading with AI-assisted classificatio
 
 | Metric | Value |
 |--------|-------|
-| Total analyses stored | 99 |
-| RAG vector store active | No (SQLite fallback) |
+| Total analyses stored | 34 |
+| RAG vector store active | Yes |
 | LLM provider | `openai` / `gpt-4o-mini` |
 | Embedding provider | `openai` / `text-embedding-3-small` |
 | Configured error types | 15 |
@@ -49,27 +49,27 @@ It replaces slow, inconsistent manual log reading with AI-assisted classificatio
 
 ### Error type distribution (all time)
 
-- `worker_oom`: 11
-- `unknown`: 10
-- `xcom_error`: 6
-- `task_timeout`: 6
-- `sensor_timeout`: 6
-- `scheduler_heartbeat`: 6
-- `pool_unavailable`: 6
-- `metadata_db_error`: 6
-- `dag_import_error`: 6
-- `connection_not_found`: 6
-- `variable_not_found`: 5
-- `upstream_failed`: 5
-- `kubernetes_pod_failure`: 5
-- `dag_file_permission`: 5
-- `dag_cycle`: 5
-- `celery_broker_disconnect`: 5
+- `xcom_error`: 3
+- `worker_oom`: 3
+- `task_timeout`: 3
+- `sensor_timeout`: 3
+- `scheduler_heartbeat`: 3
+- `dag_import_error`: 3
+- `connection_not_found`: 3
+- `variable_not_found`: 2
+- `unknown`: 2
+- `pool_unavailable`: 2
+- `metadata_db_error`: 2
+- `upstream_failed`: 1
+- `kubernetes_pod_failure`: 1
+- `dag_file_permission`: 1
+- `dag_cycle`: 1
+- `celery_broker_disconnect`: 1
 
 ### Severity distribution (all time)
 
-- High: 9
-- Medium: 90
+- High: 12
+- Medium: 22
 
 ---
 
@@ -77,19 +77,27 @@ It replaces slow, inconsistent manual log reading with AI-assisted classificatio
 
 | Field | Value |
 |-------|-------|
-| Timestamp (UTC) | 2026-05-31T13:56:58+00:00 |
-| File | `airflow_09_metadata_db_error_1780235770.log` |
-| Error type | `metadata_db_error` — Metadata Database Error |
+| Timestamp (UTC) | 2026-06-11T05:33:40+00:00 |
+| File | `airflow_10_variable_not_found_1781155945.log` |
+| Error type | `variable_not_found` — Airflow Variable Not Found |
 | Severity | **High** |
 | Similar past cases retrieved (RAG) | 3 |
 
 ### Root cause
 
-The Airflow metadata database is unreachable, likely due to incorrect connection settings, the database service not running, or network issues preventing access to the database.
+The error indicates that the Airflow variable 'api_endpoint_url' is not defined in the Airflow metadata database. This could be due to the variable not being created, being deleted, or a misconfiguration in the variable settings.
 
 ### Recommended fix
 
-1. Verify that the metadata database service (PostgreSQL or other) is running and accessible. 2. Check the connection string in your Airflow configuration (usually in `airflow.cfg` or environment variables) to ensure it is correct. Example connection string: `postgresql+psycopg2://user:password@localhost:5432/airflow_db`. 3. Ensure that the database is listening on the correct port (5432) and that there are no firewall rules blocking access. 4. If using Docker or Kubernetes, ensure that the database service is correctly linked to the Airflow service. 5. Adjust SQLAlchemy pool settings if necessary, e.g., increase `pool_size` and `max_overflow` in the connection string to handle more connections if needed.
+1. Verify if the variable 'api_endpoint_url' exists in the Airflow UI under Admin -> Variables. If it does not exist, create a new variable with the following details:
+   - Key: api_endpoint_url
+   - Value: <your_api_endpoint_url>
+
+2. If the variable exists but is misconfigured, update the variable details to ensure they are correct.
+
+3. After creating or updating the variable, test the variable retrieval in a Python shell or within a task to ensure it is working properly.
+
+4. If you are using environment variables or a secrets backend to manage variables, ensure that the variable name is correctly referenced and that the necessary values are available.
 
 ---
 
@@ -99,8 +107,8 @@ The Airflow metadata database is unreachable, likely due to incorrect connection
 - **Description:** Watches Airflow task logs, classifies 15 error types, routes to specialist agents with RAG memory.
 - **DAG ID:** log_ai_pipeline
 - **Environment:** local
-- **Logs directory:** `C:\Users\Admin\Documents\Archive\DeskTop\AiflowAWSGenAI\project\logs`
-- **Memory store:** `C:\Users\Admin\Documents\Archive\DeskTop\AiflowAWSGenAI\project\data\chroma`
+- **Logs directory:** `C:\Users\user\Documents\Ai stack\agents airflow\Airflow_GenAi_JD\logs`
+- **Memory store:** `C:\Users\user\Documents\Ai stack\agents airflow\Airflow_GenAi_JD\data\chroma`
 
 ---
 

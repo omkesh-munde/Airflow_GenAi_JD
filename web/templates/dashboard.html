@@ -50,6 +50,32 @@
       border: 1px solid var(--border);
     }
     .badge.live { background: #14532d; color: #86efac; border-color: #166534; }
+    .header-actions { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
+    .workflow-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.5rem 0.95rem;
+      border-radius: 999px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #fff;
+      text-decoration: none;
+      background: linear-gradient(110deg, var(--accent) 0%, var(--accent2) 100%);
+      background-size: 200% 100%;
+      border: 1px solid rgba(255,255,255,0.15);
+      box-shadow: 0 4px 14px rgba(59,130,246,0.35);
+      transition: transform 0.15s ease, box-shadow 0.2s ease, background-position 0.4s ease;
+      animation: btnSheen 6s linear infinite;
+    }
+    .workflow-btn:hover {
+      transform: translateY(-1px) scale(1.02);
+      box-shadow: 0 6px 22px rgba(6,182,212,0.5);
+      background-position: 100% 0;
+    }
+    .workflow-btn svg { animation: btnSpin 9s linear infinite; }
+    @keyframes btnSheen { 0% { background-position: 0 0; } 100% { background-position: 200% 0; } }
+    @keyframes btnSpin { to { transform: rotate(360deg); } }
     main { max-width: 1400px; margin: 0 auto; padding: 1.5rem 2rem 3rem; }
     .cards {
       display: grid;
@@ -202,7 +228,17 @@
       <h1 id="pipeline-name">{{ pipeline.name }}</h1>
       <p>Audit history &amp; monitoring dashboard · v{{ pipeline.version }}</p>
     </div>
-    <div>
+    <div class="header-actions">
+      <a href="/workflow" class="workflow-btn" title="Open the animated pipeline workflow">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="6" height="6" rx="1"></rect>
+          <rect x="15" y="15" width="6" height="6" rx="1"></rect>
+          <rect x="15" y="3" width="6" height="6" rx="1"></rect>
+          <path d="M9 6h3a3 3 0 0 1 3 3v0"></path>
+          <path d="M6 9v3a3 3 0 0 0 3 3h3"></path>
+        </svg>
+        <span>View Workflow</span>
+      </a>
       <span class="badge live" id="live-badge">● Live</span>
       <span class="badge" id="refresh-badge">Auto-refresh 5s</span>
     </div>
